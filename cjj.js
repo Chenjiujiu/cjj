@@ -13,8 +13,7 @@
 		flag = flag || false;//默认不开启h5选择器
 		return this.init(ele, parent, flag);
 	};
-	// 对象拷贝扩充
-	C.extend=Cjj.prototype.extend=function(){
+	C.extend = Cjj.prototype.extend = function(){
 		var option, name, src, copy,
 			target = arguments[0] || {},
 			index = 1,
@@ -78,8 +77,7 @@
 			datas = datas.slice(2);
 			if(arg.dataType === 'jsonp'){
 				var newscript = document.createElement('script');
-				newscript.src = arg.url + "?" + datas + "&&fn=" + arg.fn;
-				//www.baidu.com?uname=20&&upwd=30,fn=ahaha;
+				newscript.src = arg.url + "?" + datas + "&&callback=" + arg.callback;
 				document.appendChild(newscript);
 			}else{
 				var xhr = null;
@@ -110,11 +108,10 @@
 				};
 				xhr.send(param);
 			}
-			return this
 		},
 		//load
-		load:function(url,fn){
-			var that=this;
+		load:function(url, fn){
+			var that = this;
 			this.ajax({
 				type:"post",
 				url:url,
@@ -125,7 +122,6 @@
 					}
 				}
 			})
-			return this
 		},
 		//获取url参数
 		getserch:function(arg){
@@ -142,12 +138,13 @@
 						result[item[0]] = item[1];
 					}
 				}
-				return result;
 			}else{
+				search = '&' + search + '&';
 				var star = search.indexOf("=", search.indexOf(arg));
 				var end = search.indexOf("&", search.indexOf(arg));
-				return this.trim(search.slice(star + 1, end));
+				result = this.trim(search.slice(star + 1, end));
 			}
+			return result;
 		},
 		//拷贝对象
 		copy:function(targ){
@@ -174,11 +171,17 @@
 		isNull:function(val){
 			return this.type(val) === "[object Null]";
 		},
-		isObj:function(val){
-			if(val === null || typeof val === 'undefined'){
-				return false;
+		isObj:function(){
+			var val = arguments[0];
+			var flag = arguments[1] || false;
+			if(flag){
+				return this.type(val) === "[object Object]";
+			}else{
+				if(val === null || typeof val === 'undefined'){
+					return false;
+				}
+				return typeof val === 'object';
 			}
-			return typeof val === 'object';
 		},
 		isArray:function(val){
 			return this.type(val) === "[object Array]";
@@ -186,10 +189,24 @@
 		isDom:function(obj){
 			if(typeof HTMLElement === "object"){
 				return obj instanceof HTMLElement;
-			}else if(obj===window||obj===document){
-				return true
 			}else{
 				return obj && typeof obj === 'object' && obj.nodeType === 1;
+			}
+
+		},
+		float2:function(obj){
+			var obj=parseFloat(obj);
+			obj=Math.ceil(obj*100)/100;
+			var objarr=obj.toString().split(".");
+			if(objarr.length===1){
+				obj=obj.toString()+".00";
+				return obj;
+			}
+			if(objarr.length>1){
+				if(objarr[1].length<2){
+					obj=obj.toString()+"0";
+				}
+				return obj
 			}
 		}
 	});
@@ -201,13 +218,19 @@
 			//id选择器
 			var that = this;
 			function id(ele){
-				pushDoms([document.getElementById(ele)]);
+				var dom = document.getElementById(ele);
+				if(dom !== null){
+					pushDoms([dom]);
+				}
 				return this;
 			}
 			// tag选择器
 			function tag(ele, context){
 				context = context || document;
-				pushDoms(context.getElementsByTagName(ele));
+				var dom = context.getElementsByTagName(ele);
+				if(dom !== null){
+					pushDoms(dom);
+				}
 				return this;
 			}
 			//class选择器
@@ -215,7 +238,11 @@
 				context = context || document;
 				ele = that.trim(ele);
 				if(context.getElementsByClassName){
-					pushDoms(context.getElementsByClassName(ele));
+					var doms = context.getElementsByClassName(ele);
+					if(doms !== null){
+						pushDoms(doms);
+					}
+					return this;
 				}else{
 					var tags = context.getElementsByTagName('*');
 					var len = tags.length;
@@ -234,7 +261,10 @@
 			//h5选择器
 			function all(ele, context){
 				context = context || document;
-				pushDoms(context.querySelectorAll(ele));
+				var dom = context.querySelectorAll(ele);
+				if(dom !== null){
+					pushDoms(dom);
+				}
 				return this
 			}
 			//追加到doms
@@ -267,6 +297,7 @@
 							id(sel);
 							context = this.doms;
 						}else if(first === '.'){//类
+
 							if(context.length){
 								for(var j = 0, conlen = context.length; j < conlen; j++){
 									cla(sel, context[j]);
@@ -444,21 +475,15 @@
 		css:function(k, v){
 			if(v){
 				if(k === "opacity"){
-					if("opacity" in this.doms[0].style){
-						for(var i = 0; i < this.doms.length; i++){
-							var obj = this.doms[i];
-							obj.style[k] = v;
-						}
-					}else{
-						for(var i = 0; i < this.doms.length; i++){
-							var obj = this.doms[i];
-							obj.style.filter = "alpha(opacity=" + v * 100 + ")";
-						}
+					for(var i = 0; i < this.doms.length; i++){
+						var obj = this.doms[i];
+						obj.style[k] = v;
+						obj.style.filter = "alpha(opacity=" + v * 100 + ")";
 					}
 				}else{
 					for(var i = 0; i < this.doms.length; i++){
 						var obj = this.doms[i];
-						obj.style[k] = v;
+						obj.style[k]=v;
 					}
 				}
 				return this;
@@ -472,9 +497,13 @@
 			}
 		},
 		attr:function(k, v){
-			for(var i = 0; i < this.doms.length; i++){
-				var obj = this.doms[i];
-				obj.setAttribute(k, v);
+			if(v){
+				for(var i = 0; i < this.doms.length; i++){
+					var obj = this.doms[i];
+					obj.setAttribute(k, v);
+				}
+			}else{
+				return this.doms[0].getAttribute(k);
 			}
 			return this;
 		},
@@ -493,17 +522,25 @@
 			if(h !== undefined){
 				for(var i = 0; i < this.doms.length; i++){
 					var obj = this.doms[i];
-					obj.innerText = h;
+						obj.innerHTML = h;
 				}
 				return this;
 			}else{
-				return this.get(0).innerText;
+					return this.get(0).innerText|| this.get(0).textContent;
 			}
 		},
 		val:function(v){
 			if(v){
 				this.get(0).value = v;
+				return this;
 			}else{
+				if(v===null){
+					for(var i = 0; i < this.doms.length; i++){
+						var obj = this.doms[i];
+						obj.value='';
+					}
+					return this;
+				}
 				return this.get(0).value;
 			}
 		},
@@ -518,7 +555,9 @@
 		addClass:function(c){
 			for(var i = 0; i < this.doms.length; i++){
 				var obj = this.doms[i];
-				obj.className = obj.className + " " + c;
+				if(!C(obj).hasClass(c)){
+					obj.className = obj.className + " " + c;
+				}
 			}
 			return this;
 		},
@@ -584,10 +623,22 @@
 		scroll 滚动的
 		*/
 		windowH:function(){
-			return window.innerHeight;
+			var h;
+			if(window.innerHeight){
+				h=window.innerHeight;
+			}else{
+				h=document.documentElement.clientHeight;
+			}
+			return h
 		},
 		windowW:function(){
-			return window.innerWidth;
+			var w;
+			if(window.innerWidth){
+				w=window.innerWidth;
+			}else{
+				w=document.documentElement.clientWidth;
+			}
+			return w
 		},
 		scrollTop:function(){
 			return window.pageYOffset || /*ie9+以及最新浏览器*/
@@ -610,7 +661,7 @@
 	});
 	//动画框架
 	Cjj.prototype.extend({
-		animate:function(data){//{targent:{},time10,step:10,avg:false,infi,start,fn:fun}
+		animate:function(data){//{targent:{},time10,step:10,avg:false,fn:fun}
 			// attr{width:21px,height20px},透明度用0-100
 			// time:定时器时间间隔 默认10,
 			// step:步长比 默认10,
@@ -659,7 +710,7 @@
 					}else if(attr === "zIndex"){
 						that.css(attr, current[attr]);
 					}else{
-							that.css(attr, current[attr] + 'px');
+						that.css(attr, current[attr] + 'px');
 					}
 					if(current[attr] !== targent[attr]){//只要有一个属性还没达到，则不关闭定时器
 						flag = false;
@@ -712,11 +763,13 @@
 			if(document.addEventListener){
 				for(var i = 0; i < this.doms.length; i++){
 					var obj = this.doms[i];
+					obj.cIndex = i;
 					obj.addEventListener(type, fn, flag);
 				}
 			}else if(document.attachEvent){	//ie
 				for(var j = 0; j < this.doms.length; j++){
 					var obj2 = this.doms[j];
+					obj2.cIndex = j;
 					obj2.attachEvent('on' + type, function(obj2){
 						return function(){
 							fn.call(obj2);
@@ -744,6 +797,11 @@
 			this.on('click', fn, flag);
 			return this;
 		},
+		one:function(fn){
+			this.get(0).onclick=function(){
+				fn()
+			}
+		},
 		mEnter:function(fn, flag){
 			this.on('mouseenter', fn, flag);
 			return this;
@@ -761,6 +819,11 @@
 			}
 			return this;
 		},
+		//表单修改
+		change:function(fn,flag){
+				this.on('input',fn, flag);
+				this.on('propertychange',fn, flag);
+		},
 		// 拖拽
 		drag:function(data){//box,x,y
 			var container = data.box || document;
@@ -777,18 +840,18 @@
 					if(openx){
 						var targX = (C.event(ev).clientX - starX) + "px";
 						if(over){
-							targX=parseInt(targX)>0?0:targX;
-							targX=parseInt(targX)<(C(that).parent().get(0).offsetWidth-that.offsetWidth)?
-								(C(that).parent().get(0).offsetWidth-that.offsetWidth)+"px":targX;
+							targX = parseInt(targX) > 0 ? 0 : targX;
+							targX = parseInt(targX) < (C(that).parent().get(0).offsetWidth - that.offsetWidth) ?
+								(C(that).parent().get(0).offsetWidth - that.offsetWidth) + "px" : targX;
 						}
 						C(that).css("left", targX);
 					}
 					if(openy){
 						var targY = (C.event(ev).clientY - starY) + "px";
 						if(over){
-							targY=parseInt(targY)>0?0:targY;
-							targY=parseInt(targY)<(C(that).parent().get(0).offsetHeight-that.offsetHeight)?
-								(C(that).parent().get(0).offsetHeight-that.offsetHeight)+"px":targY;
+							targY = parseInt(targY) > 0 ? 0 : targY;
+							targY = parseInt(targY) < (C(that).parent().get(0).offsetHeight - that.offsetHeight) ?
+								(C(that).parent().get(0).offsetHeight - that.offsetHeight) + "px" : targY;
 						}
 						C(that).css("top", targY);
 					}
@@ -845,8 +908,6 @@
 			}
 			if(data.path){
 				cookieText += "; path=" + data.path;
-			}else{
-				cookieText += "; path=/";
 			}
 			if(data.domain){
 				cookieText += "; domain=" + data.domain;
@@ -884,7 +945,7 @@
 				"path":data.path || "/",
 				"days":-10,
 				"value":""
-			})
+			});
 			return this;
 		}
 	});
@@ -893,23 +954,32 @@
 		//模版字符串
 		tempStr:function(str, data){
 			//hahahahhaha#{name}fwhfawh	 用data里面的数据来替代#{name}
-			if(this.isObj(data)){
+			if(this.isObj(data,true)||data.length===0){
 				return str.replace(/#\{(\w+)\}/g, function(m, key){
 					return typeof data[key] === 'undefined' ? '' : data[key]
 				});
+			}else if(this.isArray(data)){
+				var html='';
+				for(var i = 0; i < data.length; i++){
+					html+=this.tempStr(str,data[i]);
+				}
+				return html;
 			}else{//如果data不是数组或者对象则直接替代
 				return str.replace(/#\{(\w+)\}/g, data);
 			}
-		},
+		}
 	});
 	//给目标绑定html，定一个以html模板item，数据data
 	Cjj.prototype.extend({
 		bindHtml:function(item, data){
 			var html = '';
-			for(var i = 0; i < data.length; i++){
-				html += this.tempStr(item, data[i])
-			}
+			html += this.tempStr(item, data);
 			this.html(html);
+			return this
+		},
+		//好像有点vue的感觉
+		bindData:function(data){//{ele:标签,data:数据}
+			this.html(this.tempStr(this.html(),data));
 			return this;
 		}
 	});
